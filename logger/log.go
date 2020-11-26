@@ -73,12 +73,12 @@ func NewFileLogger(name string, maxSize int64, backups int, logEventEmitter LogE
 		file:            nil,
 		logEventEmitter: logEventEmitter,
 		locker:          locker}
-	logger.openFile(false)
+	_ = logger.openFile(false)
 	return logger
 }
 
 // SetPid set the pid of the program
-func (l *FileLogger) SetPid(pid int) {
+func (l *FileLogger) SetPid(_ int) {
 	//NOTHING TO DO
 }
 
@@ -107,11 +107,11 @@ func (l *FileLogger) backupFiles() {
 		src := fmt.Sprintf("%s.%d", l.name, i)
 		dest := fmt.Sprintf("%s.%d", l.name, i+1)
 		if _, err := os.Stat(src); err == nil {
-			os.Rename(src, dest)
+			_ = os.Rename(src, dest)
 		}
 	}
 	dest := fmt.Sprintf("%s.1", l.name)
-	os.Rename(l.name, dest)
+	_ = os.Rename(l.name, dest)
 }
 
 // ClearCurLogFile clear the current log file contents
@@ -270,9 +270,9 @@ func (l *FileLogger) Write(p []byte) (int, error) {
 		}
 	}
 	if l.fileSize >= l.maxSize {
-		l.Close()
+		_ = l.Close()
 		l.backupFiles()
-		l.openFile(true)
+		_ = l.openFile(true)
 	}
 	return n, err
 }
@@ -310,7 +310,7 @@ func NewNullLogger(logEventEmitter LogEventEmitter) *NullLogger {
 }
 
 // SetPid set the pid of program
-func (l *NullLogger) SetPid(pid int) {
+func (l *NullLogger) SetPid(_ int) {
 	//NOTHING TO DO
 }
 
@@ -326,18 +326,18 @@ func (l *NullLogger) Close() error {
 }
 
 // ReadLog read the log, return error
-func (l *NullLogger) ReadLog(offset int64, length int64) (string, error) {
+func (l *NullLogger) ReadLog(_ int64, _ int64) (string, error) {
 	return "", faults.NewFault(faults.NoFile, "NO_FILE")
 }
 
 // ReadTailLog tail the log, return error
-func (l *NullLogger) ReadTailLog(offset int64, length int64) (string, int64, bool, error) {
+func (l *NullLogger) ReadTailLog(_ int64, _ int64) (string, int64, bool, error) {
 	return "", 0, false, faults.NewFault(faults.NoFile, "NO_FILE")
 }
 
 // ClearCurLogFile close current log file, return error
 func (l *NullLogger) ClearCurLogFile() error {
-	return fmt.Errorf("No log")
+	return fmt.Errorf("no log")
 }
 
 // ClearAllLogFile clear all the lof file, return error
@@ -351,7 +351,7 @@ func NewChanLogger(channel chan []byte) *ChanLogger {
 }
 
 // SetPid set the program pid
-func (l *ChanLogger) SetPid(pid int) {
+func (l *ChanLogger) SetPid(_ int) {
 	//NOTHING TO DO
 }
 
@@ -372,18 +372,18 @@ func (l *ChanLogger) Close() error {
 }
 
 // ReadLog read log, return error
-func (l *ChanLogger) ReadLog(offset int64, length int64) (string, error) {
+func (l *ChanLogger) ReadLog(_ int64, _ int64) (string, error) {
 	return "", faults.NewFault(faults.NoFile, "NO_FILE")
 }
 
 // ReadTailLog tail the log, return error
-func (l *ChanLogger) ReadTailLog(offset int64, length int64) (string, int64, bool, error) {
+func (l *ChanLogger) ReadTailLog(_ int64, _ int64) (string, int64, bool, error) {
 	return "", 0, false, faults.NewFault(faults.NoFile, "NO_FILE")
 }
 
 // ClearCurLogFile clear the log, return error
 func (l *ChanLogger) ClearCurLogFile() error {
-	return fmt.Errorf("No log")
+	return fmt.Errorf("no log")
 }
 
 // ClearAllLogFile clear the log, return error
@@ -463,7 +463,7 @@ func (l *LogCaptureLogger) SetPid(pid int) {
 
 // Write write the log to capture
 func (l *LogCaptureLogger) Write(p []byte) (int, error) {
-	l.procCommEventCapWriter.Write(p)
+	_, _ = l.procCommEventCapWriter.Write(p)
 	return l.underlineLogger.Write(p)
 }
 
@@ -502,7 +502,7 @@ func NewNullLogEventEmitter() *NullLogEventEmitter {
 }
 
 // emitLogEvent emit the log
-func (ne *NullLogEventEmitter) emitLogEvent(data string) {
+func (ne *NullLogEventEmitter) emitLogEvent(_ string) {
 }
 
 // StdLogEventEmitter emit the Stdout/Stderr LogEvent
@@ -562,7 +562,7 @@ func (bw *BackgroundWriteCloser) start() {
 			if !ok {
 				break
 			}
-			bw.writeCloser.Write(b)
+			_, _ = bw.writeCloser.Write(b)
 		}
 	}()
 }
@@ -627,7 +627,7 @@ func (cl *CompositeLogger) Close() (err error) {
 		if i == 0 {
 			err = logger.Close()
 		} else {
-			logger.Close()
+			_ = logger.Close()
 		}
 	}
 	return

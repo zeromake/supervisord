@@ -103,6 +103,7 @@ func NewEntry(configDir string) *Entry {
 
 // NewConfig create Config object
 func NewConfig(configFile string) *Config {
+	//panic("")
 	return &Config{configFile, make(map[string]*Entry), NewProcessGroup()}
 }
 
@@ -122,12 +123,12 @@ func (c *Config) createEntry(name string, configDir string) *Entry {
 func (c *Config) Load() ([]string, error) {
 	ini := ini.NewIni()
 	c.ProgramGroup = NewProcessGroup()
-	log.WithFields(log.Fields{"file": c.configFile}).Info("load configuration from file")
+	log.WithFields(log.Fields{"file": c.configFile}).Debug("load configuration from file")
 	ini.LoadFile(c.configFile)
 
 	includeFiles := c.getIncludeFiles(ini)
 	for _, f := range includeFiles {
-		log.WithFields(log.Fields{"file": f}).Info("load configuration from file")
+		log.WithFields(log.Fields{"file": f}).Debug("load configuration from file")
 		ini.LoadFile(f)
 	}
 	return c.parse(ini), nil

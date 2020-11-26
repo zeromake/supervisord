@@ -102,7 +102,7 @@ func (r *XMLRPCClient) processResponse(resp *http.Response, processBody func(io.
 		if r.verbose {
 			fmt.Println("Bad Response:", resp.Status)
 		}
-		processBody(emptyReader, fmt.Errorf("Bad response with status code %d", resp.StatusCode))
+		processBody(emptyReader, fmt.Errorf("bad response with status code %d", resp.StatusCode))
 	} else {
 		processBody(resp.Body, nil)
 	}
@@ -175,17 +175,17 @@ func (r *XMLRPCClient) postUnixHTTP(method string, path string, data interface{}
 
 }
 func (r *XMLRPCClient) post(method string, data interface{}, processBody func(io.ReadCloser, error)) {
-	url, err := url.Parse(r.serverurl)
+	u, err := url.Parse(r.serverurl)
 	if err != nil {
-		fmt.Printf("Malform url:%s\n", url)
+		fmt.Printf("Malform url:%s\n", u)
 		return
 	}
-	if url.Scheme == "http" || url.Scheme == "https" {
+	if u.Scheme == "http" || u.Scheme == "https" {
 		r.postInetHTTP(method, r.URL(), data, processBody)
-	} else if url.Scheme == "unix" {
-		r.postUnixHTTP(method, url.Path, data, processBody)
+	} else if u.Scheme == "unix" {
+		r.postUnixHTTP(method, u.Path, data, processBody)
 	} else {
-		fmt.Printf("Unsupported URL scheme:%s\n", url.Scheme)
+		fmt.Printf("Unsupported URL scheme:%s\n", u.Scheme)
 	}
 
 }
@@ -217,8 +217,8 @@ func (r *XMLRPCClient) GetAllProcessInfo() (reply AllProcessInfoReply, err error
 
 // ChangeProcessState change the proccess state
 func (r *XMLRPCClient) ChangeProcessState(change string, processName string) (reply StartStopReply, err error) {
-	if !(change == "start" || change == "stop") {
-		err = fmt.Errorf("Incorrect required state")
+	if !(change == "start" || change == "stop" || change == "restart") {
+		err = fmt.Errorf("incorrect required state")
 		return
 	}
 
@@ -236,7 +236,7 @@ func (r *XMLRPCClient) ChangeProcessState(change string, processName string) (re
 // ChangeAllProcessState change all the program to same state( start/stop )
 func (r *XMLRPCClient) ChangeAllProcessState(change string) (reply AllProcessInfoReply, err error) {
 	if !(change == "start" || change == "stop") {
-		err = fmt.Errorf("Incorrect required state")
+		err = fmt.Errorf("incorrect required state")
 		return
 	}
 	ins := struct{ Wait bool }{true}

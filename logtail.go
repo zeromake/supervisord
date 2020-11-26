@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gorilla/mux"
-	logger "github.com/ochinchina/supervisord/logger"
+	"github.com/ochinchina/supervisord/logger"
 	"net/http"
 )
 
@@ -40,7 +40,7 @@ func (lt *Logtail) getLog(logType string, w http.ResponseWriter, req *http.Reque
 	if proc == nil {
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
-		var ok bool = false
+		var ok = false
 		var compositeLogger *logger.CompositeLogger = nil
 		if logType == "stdout" {
 			compositeLogger, ok = proc.StdoutLog.(*logger.CompositeLogger)
@@ -66,7 +66,7 @@ func (lt *Logtail) getLog(logType string, w http.ResponseWriter, req *http.Reque
 				flusher.Flush()
 			}
 			compositeLogger.RemoveLogger(chanLogger)
-			chanLogger.Close()
+			_ = chanLogger.Close()
 		}
 	}
 

@@ -124,7 +124,7 @@ func (tc *TCPChecker) start() {
 				if err != nil {
 					break
 				}
-				tc.baseChecker.Write(b[0:n])
+				_, _ = tc.baseChecker.Write(b[0:n])
 			}
 		}
 	}()
@@ -134,7 +134,7 @@ func (tc *TCPChecker) start() {
 func (tc *TCPChecker) Check() bool {
 	ret := tc.baseChecker.Check()
 	if tc.conn != nil {
-		tc.conn.Close()
+		_ = tc.conn.Close()
 	}
 	return ret
 }

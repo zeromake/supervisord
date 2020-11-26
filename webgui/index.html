@@ -81,6 +81,39 @@
     }
     });
   };
+  function reStartProgram( name ) {
+      $.ajax( {
+          type: "POST",
+          dataType: "json",
+          url: "/program/restart/" + name,
+          success: function( data, status, jqXHR  ) {
+              if( data['success'] ) {
+                  // changeProgramState( name, "RUNNING" );
+                  // refreshDisplay();
+                  list_programs();
+              } else {
+                  confirm_dialog( { 'title': "Information",
+                      'message': "Fail to restart program, please check the log of supervisord to find reason",
+                      'cancel-text': "Cancel",
+                      'cancel-hide': true,
+                      'confirm-text': "Ok",
+                      'confirm-onclick': function() {}
+                  } );
+
+              }
+          },
+          error: function( jqXHR, status, errorThrown ) {
+              confirm_dialog( { 'title': "Information",
+                  'message': "Fail to restart program, please check if supervisord is started or not",
+                  'cancel-text': "Cancel",
+                  'cancel-hide': true,
+                  'confirm-text': "Ok",
+                  'confirm-onclick': function() {}
+              } );
+
+          }
+      });
+  };
 
   function stopProgram( programName ) {
       confirm_dialog( { 'title': "Stop confirmation",
@@ -135,13 +168,14 @@
           var color = "";
           if( statename.toLowerCase().indexOf("running") >= 0 || statename.toLowerCase().indexOf( "starting") >= 0 ) {
             action = '<button type="button" disabled class="btn btn-primary mr-1" onclick="startProgram(\'' + programs[i]['name'] + '\');">Start</button>';
+              action = action + '<button type="button" class="btn btn-primary mr-1" onclick="reStartProgram(\'' + programs[i]['name'] + '\');">ReStart</button>';
             action = action + '<button type="button" class="btn btn-primary" onclick="stopProgram(\'' + programs[i]['name'] + '\');">Stop</button>';
             color = "green";
           } else {
               action = '<button type="button" class="btn btn-primary mr-1" onclick="startProgram(\'' + programs[i]['name'] + '\');">Start</button>';
+              action = action + '<button type="button" disabled class="btn btn-primary mr-1" onclick="reStartProgram(\'' + programs[i]['name'] + '\');">ReStart</button>';
               action = action + '<button type="button" disabled class="btn btn-primary" onclick="stopProgram(\'' + programs[i]['name'] + '\');">Stop</button>';
               color = "red";
-
           }
 
           programs[i]['action'] = action;
@@ -239,6 +273,26 @@
           }
       });
   }
+  function restart_select() {
+      programs = get_selected_programs();
+      if( programs.length <= 0 ) {
+          alert( "no program selected" );
+          return;
+      }
+      $.ajax( {
+          type: "POST",
+          url: "/program/restartPrograms",
+          contentType: "application/json",
+          data: JSON.stringify( programs ),
+          dataType: "text",
+          success: function( data, status, jqXHR ) {
+              list_programs();
+          },
+          error: function( jqXHR, textStatus, errorThrown ) {
+              list_programs();
+          }
+      });
+  }
 
   function stop_select() {
       programs = get_selected_programs();
@@ -290,6 +344,7 @@
               <input type="button" class="btn btn-primary float-right mr-1" value="Shutdown" onclick='shutdown_supervisor();'>
               <input type="button" class="btn btn-primary float-right mr-1" value="Reload" onclick='reload_supervisor();'>
               <input type="button" class="btn btn-primary float-right mr-1" value="Stop Select" onclick='stop_select();'>
+              <input type="button" class="btn btn-primary float-right mr-1" value="ReStart Select" onclick='restart_select();'>
               <input type="button" class="btn btn-primary float-right mr-1" value="Start Select" onclick='start_select();'>
           </div>
       </div>

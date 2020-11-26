@@ -210,9 +210,9 @@ func sortProcess(procs []*Process) []*Process {
 
 	result := make([]*Process, 0)
 	p := config.NewProcessSorter()
-	for _, config := range p.SortProgram(progConfigs) {
+	for _, c := range p.SortProgram(progConfigs) {
 		for _, proc := range procs {
-			if proc.config == config {
+			if proc.config == c {
 				result = append(result, proc)
 			}
 		}

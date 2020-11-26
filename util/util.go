@@ -32,13 +32,12 @@ func StringArrayToInterfacArray(arr []string) []interface{} {
 // Sub return all the element in arr1 but not in arr2
 func Sub(arr1 []string, arr2 []string) []string {
 	result := make([]string, 0)
+	has := make(map[string]struct{}, len(arr2))
+	for _, s := range arr2 {
+		has[s] = struct{}{}
+	}
 	for _, s := range arr1 {
-		exist := false
-		for _, s2 := range arr2 {
-			if s == s2 {
-				exist = true
-			}
-		}
+		_, exist := has[s]
 		if !exist {
 			result = append(result, s)
 		}

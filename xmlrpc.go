@@ -37,7 +37,7 @@ func newHTTPBasicAuth(user string, password string, handler http.Handler) *httpB
 
 func (h *httpBasicAuth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.user == "" || h.password == "" {
-		log.Debug("no auth required")
+		//log.Debug("no auth required")
 		h.handler.ServeHTTP(w, r)
 		return
 	}
@@ -139,6 +139,7 @@ func (p *XMLRPC) createRPCServer(s *Supervisor) *rpc.Server {
 	xmlrpcCodec.RegisterAlias("supervisor.getSupervisorVersion", "Supervisor.GetVersion")
 	xmlrpcCodec.RegisterAlias("supervisor.getAllProcessInfo", "Supervisor.GetAllProcessInfo")
 	xmlrpcCodec.RegisterAlias("supervisor.startProcess", "Supervisor.StartProcess")
+	xmlrpcCodec.RegisterAlias("supervisor.restartProcess", "Supervisor.RestartProcess")
 	xmlrpcCodec.RegisterAlias("supervisor.startAllProcesses", "Supervisor.StartAllProcesses")
 	xmlrpcCodec.RegisterAlias("supervisor.startProcessGroup", "Supervisor.StartProcessGroup")
 	xmlrpcCodec.RegisterAlias("supervisor.stopProcess", "Supervisor.StopProcess")

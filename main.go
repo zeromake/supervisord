@@ -3,8 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/jessevdk/go-flags"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -12,6 +10,9 @@ import (
 	"strings"
 	"syscall"
 	"unicode"
+
+	"github.com/jessevdk/go-flags"
+	log "github.com/sirupsen/logrus"
 )
 
 // Options the command line options
@@ -28,7 +29,7 @@ func init() {
 	} else {
 		log.SetFormatter(&log.TextFormatter{DisableColors: false, FullTimestamp: true})
 	}
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func initSignals(s *Supervisor) {
@@ -40,7 +41,6 @@ func initSignals(s *Supervisor) {
 		s.procMgr.StopAllProcesses()
 		os.Exit(-1)
 	}()
-
 }
 
 var options Options
@@ -80,7 +80,7 @@ func loadEnvFile() {
 			v := strings.TrimSpace(line[pos+1:])
 			//if key and value are not empty, put it into the environment
 			if len(k) > 0 && len(v) > 0 {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}
@@ -95,13 +95,15 @@ func loadEnvFile() {
 // 5. ../etc/supervisord.conf (Relative to the executable)
 // 6. ../supervisord.conf (Relative to the executable)
 func findSupervisordConf() (string, error) {
-	possibleSupervisordConf := []string{options.Configuration,
+	possibleSupervisordConf := []string{
+		options.Configuration,
 		"./supervisord.conf",
 		"./etc/supervisord.conf",
 		"/etc/supervisord.conf",
 		"/etc/supervisor/supervisord.conf",
 		"../etc/supervisord.conf",
-		"../supervisord.conf"}
+		"../supervisord.conf",
+	}
 
 	for _, file := range possibleSupervisordConf {
 		if _, err := os.Stat(file); err == nil {
@@ -140,7 +142,7 @@ func main() {
 		if ok {
 			switch flagsErr.Type {
 			case flags.ErrHelp:
-				fmt.Fprintln(os.Stdout, err)
+				_, _ = fmt.Fprintln(os.Stdout, err)
 				os.Exit(0)
 			case flags.ErrCommandRequired:
 				if options.Daemon {
@@ -149,7 +151,7 @@ func main() {
 					runServer()
 				}
 			default:
-				fmt.Fprintf(os.Stderr, "error when parsing command: %s\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "error when parsing command: %s\n", err)
 				os.Exit(1)
 			}
 		}

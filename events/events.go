@@ -198,7 +198,7 @@ func (el *EventListener) readResult() (string, error) {
 			return "", err
 		}
 		if n < 0 {
-			return "", fmt.Errorf("Fail to read the result because the result bytes is less than 0")
+			return "", fmt.Errorf("fail to read the result because the result bytes is less than 0")
 		}
 		//read n bytes
 		b := make([]byte, n)
@@ -211,7 +211,7 @@ func (el *EventListener) readResult() (string, error) {
 		//ok, get the n bytes
 		return string(b), nil
 	}
-	return "", fmt.Errorf("Fail to read the result")
+	return "", fmt.Errorf("fail to read the result")
 }
 
 // HandleEvent handle the emitted event

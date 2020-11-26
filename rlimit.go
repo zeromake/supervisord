@@ -25,10 +25,10 @@ func (s *Supervisor) getMinRequiredRes(resourceName string) (uint64, error) {
                 if value > 0 {
                         return value, nil
                 } else {
-                        return 0, fmt.Errorf("No such key %s", resourceName)
+                        return 0, fmt.Errorf("no such key %s", resourceName)
                 }
         } else {
-                return 0, fmt.Errorf("No supervisord section")
+                return 0, fmt.Errorf("no supervisord section")
         }
 
 }

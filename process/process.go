@@ -64,21 +64,21 @@ func init() {
 func (p State) String() string {
 	switch p {
 	case Stopped:
-		return "Stopped"
+		return "STOPPED"
 	case Starting:
-		return "Starting"
+		return "STARTING"
 	case Running:
-		return "Running"
+		return "RUNNING"
 	case Backoff:
-		return "Backoff"
+		return "BACKOFF"
 	case Stopping:
-		return "Stopping"
+		return "STOPPING"
 	case Exited:
-		return "Exited"
+		return "EXITED"
 	case Fatal:
-		return "Fatal"
+		return "FATAL"
 	default:
-		return "Unknown"
+		return "UNKNOWN"
 	}
 }
 
@@ -99,6 +99,7 @@ type Process struct {
 	stdin      io.WriteCloser
 	StdoutLog  logger.Logger
 	StderrLog  logger.Logger
+	stopWait   chan struct{}
 }
 
 // NewProcess create a new Process
@@ -124,7 +125,7 @@ func (p *Process) addToCron() {
 
 	if s != "" {
 		log.WithFields(log.Fields{"program": p.GetName()}).Info("try to create cron program with cron expression:", s)
-		scheduler.AddFunc(s, func() {
+		_, _ = scheduler.AddFunc(s, func() {
 			log.WithFields(log.Fields{"program": p.GetName()}).Info("start cron program")
 			if !p.isRunning() {
 				p.Start(false)
@@ -157,7 +158,11 @@ func (p *Process) Start(wait bool) {
 	}
 
 	go func() {
-
+		defer func() {
+			if p.stopWait != nil {
+				close(p.stopWait)
+			}
+		}()
 		for {
 			p.run(func() {
 				if wait {
@@ -459,8 +464,8 @@ func (p *Process) setProgramRestartChangeMonitor(programPath string) {
 }
 
 // wait for the started program exit
-func (p *Process) waitForExit(startSecs int64) {
-	p.cmd.Wait()
+func (p *Process) waitForExit(_ int64) {
+	_ = p.cmd.Wait()
 	if p.cmd.ProcessState != nil {
 		log.WithFields(log.Fields{"program": p.GetName()}).Infof("program stopped with status:%v", p.cmd.ProcessState)
 	} else {
@@ -469,8 +474,8 @@ func (p *Process) waitForExit(startSecs int64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.stopTime = time.Now()
-	p.StdoutLog.Close()
-	p.StderrLog.Close()
+	_ = p.StdoutLog.Close()
+	_ = p.StderrLog.Close()
 }
 
 // fail to start the program
@@ -727,14 +732,14 @@ func (p *Process) setLog() {
 			log.WithFields(log.Fields{"eventListener": p.config.GetEventListenerName()}).Error("fail to get stdout")
 			return
 		}
-		events := strings.Split(p.config.GetString("events", ""), ",")
-		for i, event := range events {
-			events[i] = strings.TrimSpace(event)
+		split := strings.Split(p.config.GetString("split", ""), ",")
+		for i, event := range split {
+			split[i] = strings.TrimSpace(event)
 		}
 		p.cmd.Stderr = os.Stderr
 
 		p.registerEventListener(p.config.GetEventListenerName(),
-			events,
+			split,
 			in,
 			out)
 	}
@@ -835,7 +840,11 @@ func (p *Process) Stop(wait bool) {
 	if stopasgroup && !killasgroup {
 		log.WithFields(log.Fields{"program": p.GetName()}).Error("Cannot set stopasgroup=true and killasgroup=false")
 	}
-
+	if wait {
+		p.lock.Lock()
+		p.stopWait = make(chan struct{})
+		p.lock.Unlock()
+	}
 	var stopped int32 = 0
 	go func() {
 		for i := 0; i < len(sigs) && atomic.LoadInt32(&stopped) == 0; i++ {
@@ -845,7 +854,7 @@ func (p *Process) Stop(wait bool) {
 				continue
 			}
 			log.WithFields(log.Fields{"program": p.GetName(), "signal": sigs[i]}).Info("send stop signal to program")
-			p.Signal(sig, stopasgroup)
+			_ = p.Signal(sig, stopasgroup)
 			endTime := time.Now().Add(waitsecs)
 			//wait at most "stopwaitsecs" seconds for one signal
 			for endTime.After(time.Now()) {
@@ -859,14 +868,15 @@ func (p *Process) Stop(wait bool) {
 		}
 		if atomic.LoadInt32(&stopped) == 0 {
 			log.WithFields(log.Fields{"program": p.GetName()}).Info("force to kill the program")
-			p.Signal(syscall.SIGKILL, killasgroup)
+			_ = p.Signal(syscall.SIGKILL, killasgroup)
 			atomic.StoreInt32(&stopped, 1)
 		}
 	}()
 	if wait {
-		for atomic.LoadInt32(&stopped) == 0 {
-			time.Sleep(1 * time.Second)
-		}
+		<- p.stopWait
+		p.lock.Lock()
+		p.stopWait = nil
+		p.lock.Unlock()
 	}
 }
 

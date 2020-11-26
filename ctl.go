@@ -2,21 +2,24 @@ package main
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/ochinchina/supervisord/config"
 	"github.com/ochinchina/supervisord/types"
 	"github.com/ochinchina/supervisord/xmlrpcclient"
-	"net/http"
-	"os"
-	"strings"
 )
 
 // CtlCommand the entry of ctl command
 type CtlCommand struct {
 	ServerURL string `short:"s" long:"serverurl" description:"URL on which supervisord server is listening"`
 	User      string `short:"u" long:"user" description:"the user name"`
-	Password  string `short:"P" long:"password" description:"the password"`
+	Password  string `short:"p" long:"password" description:"the password"`
 	Verbose   bool   `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Config    *config.Config
 }
 
 // StatusCommand get the status of all supervisor managed programs
@@ -79,14 +82,11 @@ var signalCommand = CmdCheckWrapperCommand{&SignalCommand{}, 2, "signal <signal_
 var logtailCommand = CmdCheckWrapperCommand{&LogtailCommand{}, 1, "logtail <program>"}
 
 func (x *CtlCommand) getServerURL() string {
-	options.Configuration, _ = findSupervisordConf()
-
+	x.load()
 	if x.ServerURL != "" {
 		return x.ServerURL
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
-		config.Load()
-		if entry, ok := config.GetSupervisorctl(); ok {
+	} else if x.Config != nil {
+		if entry, ok := x.Config.GetSupervisorctl(); ok {
 			serverurl := entry.GetString("serverurl", "")
 			if serverurl != "" {
 				return serverurl
@@ -97,14 +97,11 @@ func (x *CtlCommand) getServerURL() string {
 }
 
 func (x *CtlCommand) getUser() string {
-	options.Configuration, _ = findSupervisordConf()
-
+	x.load()
 	if x.User != "" {
 		return x.User
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
-		config.Load()
-		if entry, ok := config.GetSupervisorctl(); ok {
+	} else if x.Config != nil {
+		if entry, ok := x.Config.GetSupervisorctl(); ok {
 			user := entry.GetString("username", "")
 			return user
 		}
@@ -113,14 +110,11 @@ func (x *CtlCommand) getUser() string {
 }
 
 func (x *CtlCommand) getPassword() string {
-	options.Configuration, _ = findSupervisordConf()
-
+	x.load()
 	if x.Password != "" {
 		return x.Password
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
-		config.Load()
-		if entry, ok := config.GetSupervisorctl(); ok {
+	} else if x.Config != nil {
+		if entry, ok := x.Config.GetSupervisorctl(); ok {
 			password := entry.GetString("password", "")
 			return password
 		}
@@ -135,15 +129,28 @@ func (x *CtlCommand) createRPCClient() *xmlrpcclient.XMLRPCClient {
 	return rpcc
 }
 
+func (x *CtlCommand) load() {
+	if x.Config != nil {
+		return
+	}
+	if len(options.Configuration) <= 0 {
+		options.Configuration, _ = findSupervisordConf()
+	}
+	cfg := config.NewConfig(options.Configuration)
+	_, _ = cfg.Load()
+	x.Config = cfg
+}
+
 // Execute implements flags.Commander interface to execute the control commands
 func (x *CtlCommand) Execute(args []string) error {
 	if len(args) == 0 {
 		return nil
 	}
-
 	rpcc := x.createRPCClient()
 	verb := args[0]
-
+	if x.Verbose {
+		log.SetLevel(log.DebugLevel)
+	}
 	switch verb {
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -232,8 +239,8 @@ func (x *CtlCommand) _startStopProcesses(rpcc *xmlrpcclient.XMLRPCClient, verb s
 }
 
 func (x *CtlCommand) restartProcesses(rpcc *xmlrpcclient.XMLRPCClient, processes []string) {
-	x._startStopProcesses(rpcc, "stop", processes, "stopped", false)
-	x._startStopProcesses(rpcc, "start", processes, "restarted", true)
+	//x._startStopProcesses(rpcc, "stop", processes, "stopped", false)
+	x._startStopProcesses(rpcc, "restart", processes, "restarted", true)
 }
 
 // shutdown the supervisord
@@ -392,13 +399,13 @@ func (rc *RestartCommand) Execute(args []string) error {
 }
 
 // Execute shutdown the supervisor
-func (sc *ShutdownCommand) Execute(args []string) error {
+func (sc *ShutdownCommand) Execute([]string) error {
 	ctlCommand.shutdown(ctlCommand.createRPCClient())
 	return nil
 }
 
 // Execute stop the running programs and reload the supervisor configuration
-func (rc *ReloadCommand) Execute(args []string) error {
+func (rc *ReloadCommand) Execute([]string) error {
 	ctlCommand.reload(ctlCommand.createRPCClient())
 	return nil
 }
@@ -420,7 +427,7 @@ func (pc *PidCommand) Execute(args []string) error {
 func (lc *LogtailCommand) Execute(args []string) error {
 	program := args[0]
 	go func() {
-		lc.tailLog(program, "stderr")
+		_ = lc.tailLog(program, "stderr")
 	}()
 	return lc.tailLog(program, "stdout")
 }
@@ -449,12 +456,11 @@ func (lc *LogtailCommand) tailLog(program string, dev string) error {
 			return err
 		}
 		if dev == "stdout" {
-			os.Stdout.Write(buf[0:n])
+			_, _ = os.Stdout.Write(buf[0:n])
 		} else {
-			os.Stderr.Write(buf[0:n])
+			_, _ = os.Stderr.Write(buf[0:n])
 		}
 	}
-	return nil
 }
 
 // Execute check if the number of arguments is ok
@@ -472,39 +478,39 @@ func init() {
 		"Control a running daemon",
 		"The ctl subcommand resembles supervisorctl command of original daemon.",
 		&ctlCommand)
-	ctlCmd.AddCommand("status",
+	_, _ = ctlCmd.AddCommand("status",
 		"show program status",
 		"show all or some program status",
 		&statusCommand)
-	ctlCmd.AddCommand("start",
+	_, _ = ctlCmd.AddCommand("start",
 		"start programs",
 		"start one or more programs",
 		&startCommand)
-	ctlCmd.AddCommand("stop",
+	_, _ = ctlCmd.AddCommand("stop",
 		"stop programs",
 		"stop one or more programs",
 		&stopCommand)
-	ctlCmd.AddCommand("restart",
+	_, _ = ctlCmd.AddCommand("restart",
 		"restart programs",
 		"restart one or more programs",
 		&restartCommand)
-	ctlCmd.AddCommand("shutdown",
+	_, _ = ctlCmd.AddCommand("shutdown",
 		"shutdown supervisord",
 		"shutdown supervisord",
 		&shutdownCommand)
-	ctlCmd.AddCommand("reload",
+	_, _ = ctlCmd.AddCommand("reload",
 		"reload the programs",
 		"reload the programs",
 		&reloadCommand)
-	ctlCmd.AddCommand("signal",
+	_, _ = ctlCmd.AddCommand("signal",
 		"send signal to program",
 		"send signal to program",
 		&signalCommand)
-	ctlCmd.AddCommand("pid",
+	_, _ = ctlCmd.AddCommand("pid",
 		"get the pid of specified program",
 		"get the pid of specified program",
 		&pidCommand)
-	ctlCmd.AddCommand("logtail",
+	_, _ = ctlCmd.AddCommand("logtail",
 		"get the standard output&standard error of the program",
 		"get the standard output&standard error of the program",
 		&logtailCommand)

@@ -1,22 +1,20 @@
-module supervisord
+module github.com/ochinchina/supervisord
+
+go 1.15
 
 require (
-	github.com/GeertJohan/go.rice v1.0.0
-	github.com/gorilla/mux v1.7.3
+	github.com/UnnoTed/fileb0x v1.1.4 // indirect
+	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/rpc v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/ochinchina/filechangemonitor v0.3.1
 	github.com/ochinchina/go-daemon v0.1.5
 	github.com/ochinchina/go-ini v1.0.1
 	github.com/ochinchina/go-reaper v0.0.0-20181016012355-6b11389e79fc
 	github.com/ochinchina/gorilla-xmlrpc v0.0.0-20171012055324-ecf2fe693a2c
-	github.com/ochinchina/supervisord v0.6.4
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/go-charset v0.0.0-20190617161244-0dc95cdf6f31 // indirect
-	github.com/sirupsen/logrus v1.4.2
-	golang.org/x/net v0.0.0-20180921000356-2f5d2388922f
+	github.com/sirupsen/logrus v1.7.0
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 )
-
-replace github.com/ochinchina/supervisord => ./
-
-go 1.15
